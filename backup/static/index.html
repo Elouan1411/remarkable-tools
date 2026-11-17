@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>reMarkable USB Backup</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Top Header -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">rM</div>
+        <div>
+          <h1>reMarkable USB Backup</h1>
+          <p class="subtitle">Official USB Web Interface (10.11.99.1) &middot; Tree &amp; Selective Export</p>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <div id="connection-badge" class="connection-badge status-checking">
+          <span class="dot"></span>
+          <span id="connection-text">Checking tablet...</span>
+        </div>
+        <button id="refresh-btn" class="btn btn-secondary" type="button" title="Reload folders and documents from tablet">
+          <span class="btn-icon">&#x21bb;</span> Refresh Tree
+        </button>
+      </div>
+    </header>
+
+    <!-- Main 2-column Workspace -->
+    <main class="workspace">
+      <!-- Left Panel: Tablet Content Tree -->
+      <section class="panel tree-panel" aria-label="Tablet Content Tree">
+        <div class="panel-header">
+          <div>
+            <h2>Tablet Library</h2>
+            <p id="selection-summary" class="muted-text">Loading tablet contents...</p>
+          </div>
+          <div class="tree-controls-row">
+            <label class="toggle-chip" title="Hide individual files and display only folder hierarchy">
+              <input type="checkbox" id="folders-only-toggle" />
+              <span>Folders Only</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="search-toolbar">
+          <div class="search-box">
+            <span class="search-icon" aria-hidden="true">&#x2315;</span>
+            <input
+              type="search"
+              id="tree-search"
+              placeholder="Filter folders or documents..."
+              autocomplete="off"
+            />
+          </div>
+          <div class="toolbar-buttons">
+            <button id="select-all-btn" class="btn btn-ghost btn-sm" type="button">Select All</button>
+            <button id="deselect-all-btn" class="btn btn-ghost btn-sm" type="button">Deselect All</button>
+            <button id="expand-all-btn" class="btn btn-ghost btn-sm" type="button">Expand All</button>
+            <button id="collapse-all-btn" class="btn btn-ghost btn-sm" type="button">Collapse All</button>
+          </div>
+        </div>
+
+        <div id="tree-container" class="tree-container">
+          <div class="empty-state">
+            <div class="spinner"></div>
+            <p>Connecting to your reMarkable tablet at <code>http://10.11.99.1</code>...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Panel: Configuration & Progress -->
+      <aside class="sidebar">
+        <!-- Export Configuration Card -->
+        <section class="panel config-panel" aria-label="Backup Configuration">
+          <div class="panel-header compact">
+            <h2>Export Settings</h2>
+          </div>
+
+          <div class="field-group">
+            <span class="field-label">Export Format</span>
+            <div class="format-cards" role="radiogroup" aria-label="Export Format">
+              <label class="format-card selected" data-format="pdf">
+                <input type="radio" name="export_format" value="pdf" checked />
+                <div class="format-card-head">
+                  <strong>PDF</strong>
+                  <span class="ext-pill">.pdf</span>
+                </div>
+                <p>Flattened PDF with annotations. Ready to view anywhere.</p>
+              </label>
+
+              <label class="format-card" data-format="rmdoc">
+                <input type="radio" name="export_format" value="rmdoc" />
+                <div class="format-card-head">
+                  <strong>reMarkable Native</strong>
+                  <span class="ext-pill">.rmdoc</span>
+                </div>
+                <p>Much faster export. Preserves layers &amp; strokes for re-import.</p>
+              </label>
+
+              <label class="format-card" data-format="both">
+                <input type="radio" name="export_format" value="both" />
+                <div class="format-card-head">
+                  <strong>Both Formats</strong>
+                  <span class="ext-pill">.pdf + .rmdoc</span>
+                </div>
+                <p>Export PDF and native .rmdoc archive side by side.</p>
+              </label>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="output-dir-input">Output Directory</label>
+            <input
+              type="text"
+              id="output-dir-input"
+              class="text-input"
+              placeholder="export_remarkable"
+            />
+          </div>
+
+          <div class="field-group options-list">
+            <label class="checkbox-row">
+              <input type="checkbox" id="skip-existing-checkbox" checked />
+              <span>Skip already downloaded files</span>
+            </label>
+
+            <div class="skiplist-row">
+              <label class="checkbox-row">
+                <input type="checkbox" id="use-skiplist-checkbox" checked />
+                <span>Skip blacklisted files (<code>skipped.txt</code>)</span>
+              </label>
+              <div class="skiplist-meta">
+                <span id="skipped-count-badge" class="count-pill">0</span>
+                <button id="clear-skipped-btn" class="btn btn-ghost btn-xs" type="button" disabled>
+                  Clear
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div id="action-error" class="inline-alert hidden" role="alert"></div>
+
+          <div class="action-buttons">
+            <button id="start-backup-btn" class="btn btn-primary btn-block" type="button" disabled>
+              Start Backup (0 documents)
+            </button>
+            <button id="cancel-backup-btn" class="btn btn-danger btn-block hidden" type="button">
+              Cancel Backup
+            </button>
+          </div>
+        </section>
+
+        <!-- Progress & Logs Card -->
+        <section class="panel progress-panel" aria-label="Backup Progress">
+          <div class="panel-header compact">
+            <h2>Progress</h2>
+            <span id="job-state-pill" class="state-pill state-idle">Idle</span>
+          </div>
+
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-track">
+              <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+            <div class="progress-meta">
+              <span id="progress-percent">0%</span>
+              <span id="progress-counter">0 / 0</span>
+            </div>
+          </div>
+
+          <p id="current-file-label" class="current-file muted-text">Waiting to start...</p>
+
+          <div class="stats-grid">
+            <div class="stat-box">
+              <span class="stat-value" id="stat-downloaded">0</span>
+              <span class="stat-label">Downloaded</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-value" id="stat-skipped">0</span>
+              <span class="stat-label">Skipped</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-value" id="stat-failed">0</span>
+              <span class="stat-label">Errors</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-value" id="stat-mb">0.0</span>
+              <span class="stat-label">Total MB</span>
+            </div>
+          </div>
+
+          <div class="log-header">
+            <span class="field-label">Activity Log</span>
+            <button id="clear-log-btn" class="btn btn-ghost btn-xs" type="button">Clear Console</button>
+          </div>
+          <div id="log-console" class="log-console" aria-live="polite"></div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
